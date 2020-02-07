@@ -6,11 +6,12 @@ package akka.stream.alpakka.cassandra.scaladsl
 
 import akka.Done
 import akka.annotation.ApiMayChange
-import akka.stream.alpakka.cassandra.impl.GuavaFutures._
 import akka.stream.scaladsl.{Flow, Keep, Sink}
-import com.datastax.driver.core.{BoundStatement, PreparedStatement, Session}
+import com.datastax.oss.driver.api.core.CqlSession
+import com.datastax.oss.driver.api.core.cql.{BoundStatement, PreparedStatement}
 
 import scala.concurrent.Future
+import scala.compat.java8.FutureConverters._
 
 /**
  * Scala API to create Cassandra Sinks.
@@ -21,8 +22,8 @@ object CassandraSink {
       parallelism: Int,
       statement: PreparedStatement,
       statementBinder: (T, PreparedStatement) => BoundStatement
-  )(implicit session: Session): Sink[T, Future[Done]] =
+  )(implicit session: CqlSession): Sink[T, Future[Done]] =
     Flow[T]
-      .mapAsyncUnordered(parallelism)(t ⇒ session.executeAsync(statementBinder(t, statement)).asScala())
+      .mapAsyncUnordered(parallelism)(t ⇒ session.executeAsync(statementBinder(t, statement)).toScala)
       .toMat(Sink.ignore)(Keep.right)
 }

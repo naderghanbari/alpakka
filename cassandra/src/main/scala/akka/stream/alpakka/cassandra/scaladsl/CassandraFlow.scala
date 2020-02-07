@@ -10,10 +10,11 @@ import akka.dispatch.ExecutionContexts
 import akka.stream.FlowShape
 import akka.stream.alpakka.cassandra.CassandraBatchSettings
 import akka.stream.scaladsl.{Flow, GraphDSL}
-import com.datastax.driver.core.{BatchStatement, BoundStatement, PreparedStatement, Session}
-import akka.stream.alpakka.cassandra.impl.GuavaFutures._
+import com.datastax.oss.driver.api.core.CqlSession
+import com.datastax.oss.driver.api.core.cql.{BatchStatement, BatchType, BoundStatement, PreparedStatement}
 
 import scala.collection.JavaConverters._
+import scala.compat.java8.FutureConverters._
 
 /**
  * Scala API to create Cassandra flows.
@@ -24,12 +25,12 @@ object CassandraFlow {
       parallelism: Int,
       statement: PreparedStatement,
       statementBinder: (T, PreparedStatement) => BoundStatement
-  )(implicit session: Session): Flow[T, T, NotUsed] =
+  )(implicit session: CqlSession): Flow[T, T, NotUsed] =
     Flow[T].mapAsync(parallelism)(
       t ⇒
         session
           .executeAsync(statementBinder(t, statement))
-          .asScala()
+          .toScala
           .map(_ => t)(ExecutionContexts.sameThreadExecutionContext)
     )
 
@@ -46,7 +47,7 @@ object CassandraFlow {
       statementBinder: (T, PreparedStatement) => BoundStatement,
       partitionKey: T => K,
       settings: CassandraBatchSettings = CassandraBatchSettings()
-  )(implicit session: Session): Flow[T, T, NotUsed] = {
+  )(implicit session: CqlSession): Flow[T, T, NotUsed] = {
     val graph = GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 
@@ -60,10 +61,10 @@ object CassandraFlow {
         Flow[Seq[T]].mapAsyncUnordered(parallelism)(
           list => {
             val boundStatements = list.map(t => statementBinder(t, statement))
-            val batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED).addAll(boundStatements.asJava)
+            val batchStatement = BatchStatement.newInstance(BatchType.UNLOGGED).addAll(boundStatements.asJava)
             session
               .executeAsync(batchStatement)
-              .asScala()
+              .toScala
               .map(_ => list)(ExecutionContexts.sameThreadExecutionContext)
           }
         )

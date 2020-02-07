@@ -11,7 +11,8 @@ import akka.stream.alpakka.cassandra.scaladsl.{CassandraFlow, CassandraSink, Cas
 import akka.stream.alpakka.testkit.scaladsl.LogCapturing
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.testkit.scaladsl.StreamTestKit.assertAllStagesStopped
-import com.datastax.driver.core.{Cluster, PreparedStatement, SimpleStatement}
+import com.datastax.oss.driver.api.core.CqlSession
+import com.datastax.oss.driver.api.core.cql.{PreparedStatement, SimpleStatement}
 import org.scalatest._
 import org.scalatest.concurrent.ScalaFutures
 
@@ -44,11 +45,8 @@ class CassandraSourceSpec
   implicit val ec = system.dispatcher
 
   //#init-session
-  implicit val session = Cluster.builder
-    .addContactPoint("127.0.0.1")
-    .withPort(9042)
-    .build
-    .connect()
+  implicit val session =
+    CqlSession.builder().build()
   //#init-session
 
   implicit val defaultPatience =
@@ -101,7 +99,7 @@ class CassandraSourceSpec
 
     "stream the result of a Cassandra statement with one page" in assertAllStagesStopped {
       val data = populate()
-      val stmt = new SimpleStatement(s"SELECT * FROM $keyspaceName.test").setFetchSize(200)
+      val stmt = SimpleStatement.builder(s"SELECT * FROM $keyspaceName.test").setPageSize(200).build()
 
       val rows = CassandraSource(stmt).runWith(Sink.seq).futureValue
 
@@ -112,7 +110,7 @@ class CassandraSourceSpec
       val data = populate()
 
       //#statement
-      val stmt = new SimpleStatement(s"SELECT * FROM $keyspaceName.test").setFetchSize(20)
+      val stmt = SimpleStatement.builder(s"SELECT * FROM $keyspaceName.test").setPageSize(20).build()
       //#statement
 
       //#run-source
@@ -124,7 +122,7 @@ class CassandraSourceSpec
 
     "support multiple materializations" in assertAllStagesStopped {
       val data = populate()
-      val stmt = new SimpleStatement(s"SELECT * FROM $keyspaceName.test")
+      val stmt = SimpleStatement.newInstance(s"SELECT * FROM $keyspaceName.test")
 
       val source = CassandraSource(stmt)
 
@@ -133,7 +131,7 @@ class CassandraSourceSpec
     }
 
     "stream the result of Cassandra statement that results in no data" in assertAllStagesStopped {
-      val stmt = new SimpleStatement(s"SELECT * FROM $keyspaceName.test")
+      val stmt = SimpleStatement.newInstance(s"SELECT * FROM $keyspaceName.test")
 
       val rows = CassandraSource(stmt).runWith(Sink.seq).futureValue
 

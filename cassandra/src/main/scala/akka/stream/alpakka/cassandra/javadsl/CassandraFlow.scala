@@ -10,7 +10,8 @@ import java.util.function.Function
 import akka.NotUsed
 import akka.annotation.ApiMayChange
 import akka.stream.alpakka.cassandra.CassandraBatchSettings
-import com.datastax.driver.core.{BoundStatement, PreparedStatement, Session}
+import com.datastax.oss.driver.api.core.CqlSession
+import com.datastax.oss.driver.api.core.cql.{BoundStatement, PreparedStatement}
 import akka.stream.alpakka.cassandra.scaladsl.{CassandraFlow => ScalaCFlow}
 import akka.stream.javadsl.Flow
 
@@ -19,7 +20,7 @@ object CassandraFlow {
   def createWithPassThrough[T](parallelism: Int,
                                statement: PreparedStatement,
                                statementBinder: BiFunction[T, PreparedStatement, BoundStatement],
-                               session: Session): Flow[T, T, NotUsed] =
+                               session: CqlSession): Flow[T, T, NotUsed] =
     ScalaCFlow
       .createWithPassThrough[T](parallelism, statement, (t, p) => statementBinder.apply(t, p))(session)
       .asJava
@@ -36,7 +37,7 @@ object CassandraFlow {
                                                statementBinder: BiFunction[T, PreparedStatement, BoundStatement],
                                                partitionKey: Function[T, K],
                                                settings: CassandraBatchSettings,
-                                               session: Session): Flow[T, T, NotUsed] =
+                                               session: CqlSession): Flow[T, T, NotUsed] =
     ScalaCFlow
       .createUnloggedBatchWithPassThrough[T, K](parallelism,
                                                 statement,

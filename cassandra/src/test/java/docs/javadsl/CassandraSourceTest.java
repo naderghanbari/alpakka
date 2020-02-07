@@ -15,7 +15,9 @@ import akka.stream.javadsl.Flow;
 import akka.stream.javadsl.Source;
 import akka.stream.testkit.javadsl.StreamTestKit;
 import akka.testkit.javadsl.TestKit;
-import com.datastax.driver.core.*;
+import com.datastax.dse.driver.api.core.cql.reactive.ReactiveRow;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.*;
 import org.junit.*;
 
 import static org.junit.Assert.*;
@@ -53,12 +55,11 @@ public class CassandraSourceTest {
 
   private static ActorSystem system;
   private static Materializer materializer;
-  private static Session session;
+  private static CqlSession session;
 
-  private static Session setupSession() {
+  private static CqlSession setupSession() {
     // #init-session
-    final Session session =
-        Cluster.builder().addContactPoint("127.0.0.1").withPort(9042).build().connect();
+    final CqlSession session = CqlSession.builder().build();
     // #init-session
     return session;
   }
@@ -108,11 +109,11 @@ public class CassandraSourceTest {
 
     // #statement
     final Statement stmt =
-        new SimpleStatement("SELECT * FROM akka_stream_java_test.test").setFetchSize(20);
+        SimpleStatement.builder("SELECT * FROM akka_stream_java_test.test").setPageSize(20).build();
     // #statement
 
     // #run-source
-    final CompletionStage<List<Row>> rows =
+    final CompletionStage<List<ReactiveRow>> rows =
         CassandraSource.create(stmt, session).runWith(Sink.seq(), materializer);
     // #run-source
 

@@ -11,7 +11,8 @@ import akka.Done
 import akka.annotation.ApiMayChange
 import akka.stream.alpakka.cassandra.scaladsl.{CassandraSink => ScalaCSink}
 import akka.stream.javadsl.Sink
-import com.datastax.driver.core.{BoundStatement, PreparedStatement, Session}
+import com.datastax.oss.driver.api.core.CqlSession
+import com.datastax.oss.driver.api.core.cql.{BoundStatement, PreparedStatement}
 
 import scala.compat.java8.FutureConverters._
 
@@ -21,7 +22,7 @@ object CassandraSink {
   def create[T](parallelism: Int,
                 statement: PreparedStatement,
                 statementBinder: BiFunction[T, PreparedStatement, BoundStatement],
-                session: Session): Sink[T, CompletionStage[Done]] = {
+                session: CqlSession): Sink[T, CompletionStage[Done]] = {
     val sink =
       ScalaCSink.apply[T](parallelism, statement, (t, p) => statementBinder.apply(t, p))(session)
 

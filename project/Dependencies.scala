@@ -107,8 +107,8 @@ object Dependencies {
 
   val Cassandra = Seq(
     libraryDependencies ++= Seq(
-        "com.datastax.cassandra" % "cassandra-driver-core" % "3.7.1" // ApacheV2
-      )
+        "com.datastax.oss" % "java-driver-core" % "4.4.0" // ApacheV2
+    )
   )
 
   val Couchbase = Seq(

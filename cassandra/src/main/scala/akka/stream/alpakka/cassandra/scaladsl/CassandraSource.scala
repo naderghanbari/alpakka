@@ -6,11 +6,9 @@ package akka.stream.alpakka.cassandra.scaladsl
 
 import akka.NotUsed
 import akka.annotation.ApiMayChange
-import akka.stream.alpakka.cassandra.impl.CassandraSourceStage
 import akka.stream.scaladsl.Source
-import com.datastax.driver.core._
-
-import scala.concurrent.Future
+import com.datastax.oss.driver.api.core.CqlSession
+import com.datastax.oss.driver.api.core.cql.{Row, Statement}
 
 @ApiMayChange // https://github.com/akka/alpakka/issues/1213
 object CassandraSource {
@@ -18,13 +16,7 @@ object CassandraSource {
   /**
    * Scala API: creates a [[CassandraSourceStage]] from a given statement.
    */
-  def apply(stmt: Statement)(implicit session: Session): Source[Row, NotUsed] =
-    Source.fromGraph(new CassandraSourceStage(Future.successful(stmt), session))
-
-  /**
-   * Scala API: creates a [[CassandraSourceStage]] from the result of a given Future.
-   */
-  def fromFuture(futStmt: Future[Statement])(implicit session: Session): Source[Row, NotUsed] =
-    Source.fromGraph(new CassandraSourceStage(futStmt, session))
+  def apply(stmt: Statement[_])(implicit session: CqlSession): Source[Row, NotUsed] =
+    Source.fromPublisher(session.executeReactive(stmt))
 
 }
